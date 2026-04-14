@@ -85,7 +85,7 @@ export default function PaymentForm({ onSuccess, onFailed }) {
       const paymentData = await paymentRes.json();
   
       const options = {
-        key: paymentData.keyId,
+        key: paymentData.keyId || "rzp_test_SdNZt9C5Aso0Yb",
         amount: paymentData.amount,
         currency: paymentData.currency,
         name: "Soumalya's Payment Portal",
