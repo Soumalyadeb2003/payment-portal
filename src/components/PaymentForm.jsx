@@ -14,6 +14,7 @@ export default function PaymentForm({ onSuccess, onFailed }) {
   const [couponError, setCouponError] = useState("");
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [error, setError] = useState("");   // ← ADD THIS LINE
 
   const validCoupon = "SOUMALYA20";
   const discount = couponApplied ? 200 : 0;
