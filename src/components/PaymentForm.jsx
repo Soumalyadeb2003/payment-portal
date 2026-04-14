@@ -29,15 +29,47 @@ export default function PaymentForm({ onSuccess, onFailed }) {
     }
   };
 
-  const handlePayment = () => {
+  const handlePayment = async () => {
     setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
-      setSuccess(true);
-      if (onSuccess) {
-        onSuccess();
+    setError("");
+  
+    try {
+      const token = localStorage.getItem("token");
+  
+      const response = await fetch(
+        "https://payment-backend-production-a82f.up.railway.app/api/orders/create",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            items: [
+              { name: "Wireless Headphones", price: 1999, qty: 1 },
+              { name: "Phone Case", price: 499, qty: 2 },
+              { name: "USB Cable", price: 299, qty: 1 },
+            ],
+            totalAmount: totalAmount,
+            paymentMethod: method,
+          }),
+        }
+      );
+  
+      const data = await response.json();
+  
+      if (response.ok) {
+        setLoading(false);
+        setSuccess(true);
+        if (onSuccess) onSuccess();
+      } else {
+        setError(data.message || "Payment failed!");
+        setLoading(false);
       }
-    }, 2000);
+    } catch (err) {
+      setError("Cannot connect to server. Please try again.");
+      setLoading(false);
+    }
   };
 
   const methods = [
