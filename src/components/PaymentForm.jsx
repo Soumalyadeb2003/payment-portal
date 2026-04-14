@@ -37,13 +37,13 @@ export default function PaymentForm({ onSuccess, onFailed }) {
     try {
       const token = localStorage.getItem("token");
   
-      const response = await fetch(
+      const orderRes = await fetch(
         "https://payment-backend-production-a82f.up.railway.app/api/orders/create",
         {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            "Authorization": `Bearer ${token}`,
+            Authorization: `Bearer ${token}`,
           },
           body: JSON.stringify({
             items: [
@@ -57,18 +57,90 @@ export default function PaymentForm({ onSuccess, onFailed }) {
         }
       );
   
-      const data = await response.json();
+      const orderData = await orderRes.json();
   
-      if (response.ok) {
+      if (!orderRes.ok) {
+        setError(orderData.message || "Failed to create order!");
         setLoading(false);
-        setSuccess(true);
-        if (onSuccess) onSuccess();
-      } else {
-        setError(data.message || "Payment failed!");
-        setLoading(false);
+        return;
       }
+  
+      const orderId = orderData.order._id;
+  
+      const paymentRes = await fetch(
+        "https://payment-backend-production-a82f.up.railway.app/api/payments/create-order",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            amount: totalAmount,
+            orderId: orderId,
+          }),
+        }
+      );
+  
+      const paymentData = await paymentRes.json();
+  
+      const options = {
+        key: paymentData.keyId,
+        amount: paymentData.amount,
+        currency: paymentData.currency,
+        name: "Soumalya's Payment Portal",
+        description: "Order Payment",
+        order_id: paymentData.razorpayOrderId,
+        handler: async (response) => {
+          const verifyRes = await fetch(
+            "https://payment-backend-production-a82f.up.railway.app/api/payments/verify",
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${token}`,
+              },
+              body: JSON.stringify({
+                razorpayOrderId: response.razorpay_order_id,
+                razorpayPaymentId: response.razorpay_payment_id,
+                razorpaySignature: response.razorpay_signature,
+                orderId: orderId,
+              }),
+            }
+          );
+  
+          const verifyData = await verifyRes.json();
+  
+          if (verifyData.success) {
+            setLoading(false);
+            if (onSuccess) onSuccess();
+          } else {
+            setError("Payment verification failed!");
+            setLoading(false);
+            if (onFailed) onFailed();
+          }
+        },
+        prefill: {
+          name: "Soumalya",
+          email: "soumalyadebban.slsn12abc@gmail.com",
+          contact: "9163254102",
+        },
+        theme: {
+          color: "#febd69",
+        },
+        modal: {
+          ondismiss: () => {
+            setLoading(false);
+            setError("Payment cancelled!");
+          },
+        },
+      };
+  
+      const razorpayInstance = new window.Razorpay(options);
+      razorpayInstance.open();
+  
     } catch (err) {
-      setError("Cannot connect to server. Please try again.");
+      setError("Something went wrong. Please try again.");
       setLoading(false);
     }
   };
